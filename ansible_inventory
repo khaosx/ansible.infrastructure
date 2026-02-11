@@ -1,0 +1,71 @@
+all:
+  hosts:
+    pihole-01:
+      ansible_host: 10.0.10.5
+    pihole-02:
+      ansible_host: 10.0.10.6
+    jarvis-ai:
+      ansible_host: 10.0.10.42
+    fire:
+      ansible_host: 10.0.10.17
+    air:
+      ansible_host: 10.0.10.18
+    water:
+      ansible_host: 10.0.10.19
+    earth:
+      ansible_host: 10.0.10.20
+    infrastructure-01:
+      ansible_host: 10.0.20.96
+    paperless-01:
+      ansible_host: 10.0.20.87
+    test-server:
+      ansible_host: 10.0.20.88
+
+  children:
+    linux_servers:
+      children:
+        core_servers:
+        pihole:
+        paperless:
+        technitium_dns:
+        ai_servers:
+        raspberry_pi_4:
+        docker:
+
+    core_servers:
+      hosts:
+        infrastructure-01:
+        paperless-01:
+
+    pihole:
+      hosts:
+        pihole-01:
+        pihole-02:
+
+    paperless:
+      hosts:
+        paperless-01:
+
+    technitium_dns:
+      hosts:
+
+    ai_servers:
+      hosts:
+        jarvis-ai:
+
+    raspberry_pi_4:
+      hosts:
+        fire:
+        air:
+        water:
+        earth:
+
+    docker:
+      hosts:
+        infrastructure-01:
+        paperless-01:
+        test-server:
+        fire:
+        air:
+        water:
+        earth:

@@ -1,0 +1,75 @@
+---
+
+ansible_managed: |
+  Managed By Ansible - Do Not Modify
+
+# Lookup Credentials from secrets.yml, hydrated from 1Password
+automation_user: "{{ vault_admin_username }}"
+automation_user_pw: "{{ vault_automation_user_pw }}"
+automation_user_ssh_public_key: "{{ vault_automation_user_ssh_public_key }}"
+app_admin_user: "{{ vault_app_admin_user }}"
+app_admin_user_pw: "{{ vault_app_admin_user_pw }}"
+admin_email: "{{ vault_admin_email }}"
+configure_ssl_email: "{{ vault_configure_ssl_email }}"
+configure_ssl_cloudflare_api_token: "{{ vault_configure_ssl_cloudflare_api_token }}"
+
+# User management
+admin_user: "{{ automation_user }}"
+ansible_become_password: "{{ automation_user_pw }}"
+admin_user_ssh_public_key: "{{ automation_user_ssh_public_key }}"
+
+# Site configuration
+# Overrides role defaults (e.g., provision_ubuntu_2404).
+site_timezone: "{{ vault_site_tz }}"
+site_domain: "{{ vault_site_domain }}"
+blacklist_wireless_pi: true
+
+# UFW application profile catalog
+ufw_application_catalog:
+  - name: Gitea
+    title: "Gitea"
+    description: "Gitea web UI and SSH"
+    ports:
+      - "3000/tcp"
+      - "2222/tcp"
+  - name: "PiholeV6"
+    title: "Pi-hole v6"
+    description: "DNS, DHCP, NTP, and Web UI for Pi-hole v6"
+    ports:
+      - "53"
+      - "67/udp"
+      - "123/udp"
+      - "80/tcp"
+      - "443/tcp"
+  - name: Technitium
+    title: "Technitium DNS"
+    description: "DNS and management UI"
+    ports:
+      - "53"
+      - "67/udp"
+      - "5380/tcp"
+      - "53443/tcp"
+  - name: Caddy
+    title: "Caddy"
+    description: "HTTP/HTTPS"
+    ports:
+      - "80/tcp"
+      - "443/tcp"
+  - name: Paperless
+    title: "Paperless-ngx"
+    description: "Paperless UI, AI, and GPT"
+    ports:
+      - "8000/tcp"
+      - "3000/tcp"
+      - "8080/tcp"
+  - name: Dozzle
+    title: "Dozzle"
+    description: "Docker log viewer"
+    ports:
+      - "9081/tcp"
+
+# UFW rules for docker hosts (used by paperless-stack as well)
+ufw_allow_rules:
+  - port: "9081"
+    proto: "tcp"
+    comment: "Dozzle"

@@ -1,0 +1,57 @@
+# ===============================================================================
+# This is the main site-wide playbook. It includes common provisioning tasks
+# as well as individual system playbooks for specific server roles.
+# USE WITH CAUTION: Modifying this file can impact the entire infrastructure.
+# It's the whole magilla.
+
+---
+
+# Refresh SSH host keys on the controller before connecting to any hosts.
+- name: Refresh SSH host keys (controller)
+  hosts: all
+  gather_facts: false
+  become: false
+  tags: always
+  tasks:
+    - name: Remove existing host keys
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host | default(inventory_hostname) }}"
+        state: absent
+      delegate_to: localhost
+      run_once: false
+
+    - name: Add current host keys
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host | default(inventory_hostname) }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ (ansible_host | default(inventory_hostname))) }}"
+      delegate_to: localhost
+      run_once: false
+
+# Common Server Provisioning
+- name: Ubuntu 24.04 Common Provisioning Tasks
+  hosts: linux_servers
+  gather_facts: true
+  become: true
+  roles:
+    - role: provision_ubuntu_2404
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+      tags: [provision, system]
+
+# Docker Provisioning
+- name: Docker Provisioning Tasks
+  hosts: docker
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker_engine
+      tags: [provision, docker]
+
+# Pi-hole Deployment
+- name: Deploy pihole-01 and pihole-02
+  hosts: pihole
+  become: true
+  roles:
+    - role: pihole_v6
+      tags: [infra, services, dns]

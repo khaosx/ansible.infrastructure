@@ -1,0 +1,91 @@
+# ===============================================================================
+# This is the main site-wide playbook. It includes common provisioning tasks
+# as well as individual system playbooks for specific server roles.
+# USE WITH CAUTION: Modifying this file can impact the entire infrastructure.
+# It's the whole magilla.
+
+---
+
+# Common Server Provisioning
+# ===============================================================================
+- name: Ubuntu 24.04 Common Provisioning Tasks
+  hosts: linux_servers
+  gather_facts: true
+  become: true
+  roles:
+    - role: provision_ubuntu_2404
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+      tags: [provision, system]
+
+# Docker Provisioning
+# ===============================================================================
+- name: Docker Provisioning Tasks
+  hosts: docker
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker_engine
+      tags: [provision, docker]
+
+# ===============================================================================
+# Individual System Playbooks
+# ===============================================================================
+
+- name: Deploy docker host infrastructure-01
+  hosts: infrastructure-01
+  become: true
+  roles:
+    # External roles; ensure present before running this play.
+    - role: traefik_proxy
+      tags: [traefik, proxy]
+    - role: speedtest
+      tags: [speedtest, internet]
+    - role: ntfy
+      tags: [ntfy, alerts]
+    - role: gitea
+      tags: [gitea, git]
+    - role: nebula_sync
+      tags: [nebula_sync]
+    - role: netbox
+      tags: [netbox]
+    - role: apprise
+      tags: [apprise, alerts]
+    - role: mailrise
+      tags: [mailrise, alerts]
+    - role: pulse
+      tags: [pulse, monitoring]
+
+- name: Deploy pihole-01 and pihole-02
+  hosts: pihole
+  become: true
+  roles:
+    - role: pihole_v6
+      tags: [infra, services, dns]
+
+- name: Deploy local AI LLM endpoint
+  hosts: ai_servers
+  gather_facts: true
+  become: true
+  vars:
+    ai_openwebui_enabled: true
+    ai_validate_gpu_container: true
+  roles:
+    # External role; ensure present before running this play.
+    - role: ai_llm_endpoint
+
+- name: Deploy Technitium DNS Server
+  hosts: technitium_dns
+  become: true
+  roles:
+    # External role (collection-based); ensure present before running this play.
+    - role: technitium
+      tags: [infra, services, dns, technitium]
+
+- name: Deploy Paperless-ngx Document Management Stack
+  hosts: paperless-01
+  become: true
+  roles:
+    - role: paperless-stack
+      tags: [paperless, document_management]

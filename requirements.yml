@@ -1,0 +1,27 @@
+# Ansible requirements for collections and external role repositories.
+# Install with:
+# ansible-galaxy collection install -r requirements.yml --force
+# ansible-galaxy role install -r requirements.yml -p ./.ansible/roles --force
+
+collections:
+  - name: community.general
+  - name: ansible.posix
+  - name: community.docker
+  - name: effectivelywild.technitium_dns
+
+roles:
+  - name: docker_engine
+    src: https://github.com/khaosx/ansible.role.docker_engine.git
+    scm: git
+
+  - name: provision_ubuntu_2404
+    src: https://github.com/khaosx/ansible.role.provision_ubuntu_2404.git
+    scm: git
+
+  - name: ufw_profiles
+    src: https://github.com/khaosx/ansible.role.ufw_profiles.git
+    scm: git
+
+  - name: pihole_v6
+    src: https://github.com/khaosx/ansible.role.pihole_v6.git
+    scm: git
