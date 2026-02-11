@@ -90,3 +90,9 @@ nebula_sync_replicas: >-
     | map('regex_replace', '$', '|' ~ app_admin_user_pw)
     | list
   }}
+
+# Paperless stack defaults/overrides
+paperless_stack_enable_ai: true
+paperless_stack_url: "https://docubot.{{ site_domain }}"
+paperless_stack_paperless_username: "{{ app_admin_user }}"
+paperless_stack_ai_ollama_url: "http://jarvis-ai.{{ site_domain }}:11434"

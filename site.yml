@@ -94,3 +94,12 @@
   roles:
     - role: nebula_sync
       tags: [infra, services, dns]
+
+# Paperless Deployment
+- name: Deploy Paperless-ngx Document Management Stack
+  hosts: paperless-01
+  gather_facts: true
+  become: true
+  roles:
+    - role: paperless_stack
+      tags: [paperless, document_management]
