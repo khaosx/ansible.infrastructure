@@ -25,3 +25,7 @@ roles:
   - name: pihole_v6
     src: https://github.com/khaosx/ansible.role.pihole_v6.git
     scm: git
+
+  - name: nebula_sync
+    src: https://github.com/khaosx/ansible.role.nebula_sync.git
+    scm: git

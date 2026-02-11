@@ -85,3 +85,12 @@
   roles:
     - role: pihole_v6
       tags: [infra, services, dns]
+
+# Nebula Sync Deployment
+- name: Deploy nebula-sync on infrastructure-01
+  hosts: infrastructure-01
+  gather_facts: true
+  become: true
+  roles:
+    - role: nebula_sync
+      tags: [infra, services, dns]

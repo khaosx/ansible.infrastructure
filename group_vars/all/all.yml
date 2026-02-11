@@ -73,3 +73,20 @@ ufw_allow_rules:
   - port: "9081"
     proto: "tcp"
     comment: "Dozzle"
+
+# Nebula Sync defaults/overrides
+# Primary is the first host in the 'pihole' inventory group; remaining hosts are replicas.
+nebula_sync_pihole_hosts: "{{ groups['pihole'] | default([]) }}"
+nebula_sync_primary: >-
+  {{
+    ('http://' ~ nebula_sync_pihole_hosts[0] ~ '.' ~ site_domain ~ '|' ~ app_admin_user_pw)
+    if (nebula_sync_pihole_hosts | length) > 0 else ''
+  }}
+nebula_sync_replicas: >-
+  {{
+    nebula_sync_pihole_hosts[1:]
+    | map('regex_replace', '$', '.' ~ site_domain)
+    | map('regex_replace', '^', 'http://')
+    | map('regex_replace', '$', '|' ~ app_admin_user_pw)
+    | list
+  }}
