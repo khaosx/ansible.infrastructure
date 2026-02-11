@@ -24,21 +24,38 @@
       delegate_to: localhost
       run_once: false
 
-    - name: Remove existing host keys
-      ansible.builtin.known_hosts:
-        name: "{{ ansible_host | default(inventory_hostname) }}"
-        state: absent
+    - name: Scan current host keys
+      ansible.builtin.command:
+        argv:
+          - ssh-keyscan
+          - -T
+          - "5"
+          - -t
+          - rsa,ecdsa,ed25519
+          - "{{ ansible_host | default(inventory_hostname) }}"
+      register: ssh_keyscan_result
+      changed_when: false
       delegate_to: localhost
       run_once: false
       when: not ssh_connectivity_check.failed
 
-    - name: Add current host keys
+    - name: Ensure current host keys are present
       ansible.builtin.known_hosts:
         name: "{{ ansible_host | default(inventory_hostname) }}"
-        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ (ansible_host | default(inventory_hostname))) }}"
+        key: "{{ item }}"
+        state: present
+      loop: >-
+        {{
+          ssh_keyscan_result.stdout_lines
+          | reject('match', '^#')
+          | reject('equalto', '')
+          | list
+        }}
       delegate_to: localhost
       run_once: false
-      when: not ssh_connectivity_check.failed
+      when:
+        - not ssh_connectivity_check.failed
+        - ssh_keyscan_result.stdout_lines | length > 0
 
 # Common Server Provisioning
 - name: Ubuntu 24.04 Common Provisioning Tasks
