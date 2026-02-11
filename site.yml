@@ -13,12 +13,24 @@
   become: false
   tags: always
   tasks:
+    - name: Check SSH connectivity from controller
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host | default(inventory_hostname) }}"
+        port: 22
+        timeout: 5
+      register: ssh_connectivity_check
+      failed_when: false
+      changed_when: false
+      delegate_to: localhost
+      run_once: false
+
     - name: Remove existing host keys
       ansible.builtin.known_hosts:
         name: "{{ ansible_host | default(inventory_hostname) }}"
         state: absent
       delegate_to: localhost
       run_once: false
+      when: not ssh_connectivity_check.failed
 
     - name: Add current host keys
       ansible.builtin.known_hosts:
@@ -26,6 +38,7 @@
         key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ (ansible_host | default(inventory_hostname))) }}"
       delegate_to: localhost
       run_once: false
+      when: not ssh_connectivity_check.failed
 
 # Common Server Provisioning
 - name: Ubuntu 24.04 Common Provisioning Tasks
