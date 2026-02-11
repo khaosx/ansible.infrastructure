@@ -3,7 +3,7 @@ galaxy_info:
   role_name: paperless_stack
   namespace: khaosx
   author: Kris
-  description: Deploy a Paperless-ngx document stack (Paperless, Postgres, Redis, Gotenberg, Tika, optional Paperless-AI/Paperless-GPT) via Docker Compose on Ubuntu.
+  description: Deploy a Paperless-ngx document stack via Docker Compose on Ubuntu.
   license: MIT
   min_ansible_version: "2.15"
   platforms:
