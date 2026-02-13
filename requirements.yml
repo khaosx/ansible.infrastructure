@@ -29,3 +29,7 @@ roles:
   - name: nebula_sync
     src: https://github.com/khaosx/ansible.role.nebula_sync.git
     scm: git
+
+  - name: homepage
+    src: https://github.com/khaosx/ansible.role.homepage.git
+    scm: git
