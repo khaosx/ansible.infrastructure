@@ -33,3 +33,7 @@ roles:
   - name: homepage
     src: https://github.com/khaosx/ansible.role.homepage.git
     scm: git
+
+  - name: zulip
+    src: /Users/kris/projects/ansible.role.zulip
+    scm: git

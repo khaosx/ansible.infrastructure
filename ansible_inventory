@@ -16,10 +16,16 @@ all:
       ansible_host: 10.0.10.20
     infrastructure-01:
       ansible_host: 10.0.20.96
+    concierge:
+      ansible_host: 10.0.20.89
     paperless-01:
       ansible_host: 10.0.20.87
     test-server:
       ansible_host: 10.0.20.88
+    proxy-int:
+      ansible_host: 10.0.20.90
+    monitor-01:
+      ansible_host: 10.0.20.91
 
   children:
     linux_servers:
@@ -35,7 +41,10 @@ all:
     core_servers:
       hosts:
         infrastructure-01:
+        concierge:
         paperless-01:
+        proxy-int:
+        monitor-01:
 
     pihole:
       hosts:
@@ -63,9 +72,28 @@ all:
     docker:
       hosts:
         infrastructure-01:
+        concierge:
         paperless-01:
         test-server:
+        proxy-int:
+        monitor-01:
         fire:
         air:
         water:
         earth:
+
+    notification_stack:
+      hosts:
+        concierge:
+
+    homepage:
+      hosts:
+        concierge:
+
+    zulip:
+      hosts:
+        concierge:
+
+    monitoring_stack:
+      hosts:
+        monitor-01:

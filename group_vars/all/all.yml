@@ -22,6 +22,7 @@ admin_user_ssh_public_key: "{{ automation_user_ssh_public_key }}"
 # Overrides role defaults (e.g., provision_ubuntu_2404).
 site_timezone: "{{ vault_site_tz }}"
 site_domain: "{{ vault_site_domain }}"
+site_proxy_int: "10.0.20.25"
 blacklist_wireless_pi: true
 
 # UFW application profile catalog
@@ -62,17 +63,6 @@ ufw_application_catalog:
       - "8000/tcp"
       - "3000/tcp"
       - "8080/tcp"
-  - name: Dozzle
-    title: "Dozzle"
-    description: "Docker log viewer"
-    ports:
-      - "9081/tcp"
-
-# UFW rules for docker hosts (used by paperless-stack as well)
-ufw_allow_rules:
-  - port: "9081"
-    proto: "tcp"
-    comment: "Dozzle"
 
 # Nebula Sync defaults/overrides
 # Primary is the first host in the 'pihole' inventory group; remaining hosts are replicas.
@@ -96,3 +86,17 @@ paperless_stack_enable_ai: true
 paperless_stack_url: "https://docubot.{{ site_domain }}"
 paperless_stack_paperless_username: "{{ app_admin_user }}"
 paperless_stack_ai_ollama_url: "http://jarvis-ai.{{ site_domain }}:11434"
+
+# Notification stack defaults/overrides
+notification_stack_apprise_port: 8000
+notification_stack_mailrise_smtp_port: 8025
+
+# Homepage defaults/overrides
+homepage_title: "Concierge"
+homepage_description: "Unified interface for infrastructure services"
+
+# Monitoring stack defaults/overrides
+monitoring_stack_grafana_port: 3000
+monitoring_stack_prometheus_port: 9090
+monitoring_stack_grafana_admin_user: "{{ app_admin_user }}"
+monitoring_stack_grafana_admin_password: "{{ app_admin_user_pw }}"

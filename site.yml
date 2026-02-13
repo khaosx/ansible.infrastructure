@@ -103,3 +103,39 @@
   roles:
     - role: paperless_stack
       tags: [paperless, document_management]
+
+# Notification Stack Deployment
+- name: Deploy Notification Stack (Apprise + Mailrise)
+  hosts: notification_stack
+  gather_facts: true
+  become: true
+  roles:
+    - role: notification_stack
+      tags: [notifications, mailrise, apprise]
+
+# Homepage Deployment
+- name: Deploy Homepage Dashboard
+  hosts: homepage
+  gather_facts: true
+  become: true
+  roles:
+    - role: homepage
+      tags: [homepage, dashboard]
+
+# Zulip Deployment
+- name: Deploy Zulip Chat
+  hosts: zulip
+  gather_facts: true
+  become: true
+  roles:
+    - role: zulip
+      tags: [zulip, chat]
+
+# Monitoring Stack Deployment
+- name: Deploy Monitoring Stack (Prometheus + Grafana + Loki)
+  hosts: monitoring_stack
+  gather_facts: true
+  become: true
+  roles:
+    - role: monitoring_stack
+      tags: [monitoring, prometheus, grafana, loki]
