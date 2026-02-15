@@ -95,6 +95,17 @@ notification_stack_mailrise_smtp_port: 8025
 homepage_title: "Concierge"
 homepage_description: "Unified interface for infrastructure services"
 
+# Zulip defaults/overrides
+zulip_admin_email: "jarvis@ismyshitdown.com"
+zulip_admin_full_name: "Jarvis"
+zulip_admin_password: "{{ app_admin_user_pw }}"
+zulip_email_host: "smtp.fastmail.com"
+zulip_email_host_user: "jarvis@ismyshitdown.com"
+zulip_email_password: "{{ vault_imsd_smtp_app_password }}"
+zulip_email_port: 587
+zulip_email_use_tls: true
+zulip_email_use_ssl: false
+
 # Monitoring stack defaults/overrides
 monitoring_stack_grafana_port: 3000
 monitoring_stack_prometheus_port: 9090
