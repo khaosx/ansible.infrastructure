@@ -32,6 +32,3 @@ vault_pihole_webserver_app_pwhash: "op://khaosx-infrastructure/Pi-hole Web Passw
 # Paperless secrets
 vault_paperless_db_password: "op://khaosx-infrastructure/Paperless Secrets/paperless_db_password"
 vault_paperless_secret_key: "op://khaosx-infrastructure/Paperless Secrets/paperless_secret_key"
-
-# FastMail SMTP app passwords (ismyshitdown.com)
-vault_imsd_smtp_app_password: "op://khaosx-infrastructure/App Password For imsd/password"
