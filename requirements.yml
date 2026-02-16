@@ -33,3 +33,11 @@ roles:
   - name: homepage
     src: https://github.com/khaosx/ansible.role.homepage.git
     scm: git
+
+  - name: notification_stack
+    src: https://github.com/khaosx/ansible.role.notification_stack.git
+    scm: git
+
+  - name: paperless_stack
+    src: https://github.com/khaosx/ansible.role.paperless_stack.git
+    scm: git

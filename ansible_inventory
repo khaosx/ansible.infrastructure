@@ -50,6 +50,7 @@ all:
       hosts:
         pihole-01:
         pihole-02:
+        test-server:
 
     paperless:
       hosts:
