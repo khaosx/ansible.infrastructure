@@ -1,0 +1,130 @@
+services:
+  database:
+    image: "{{ zulip_postgres_image }}"
+    restart: "{{ zulip_restart_policy }}"
+    secrets:
+      - zulip__postgres_password
+    environment:
+      POSTGRES_DB: "zulip"
+      POSTGRES_USER: "zulip"
+      POSTGRES_PASSWORD_FILE: /run/secrets/zulip__postgres_password
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data:rw
+
+  memcached:
+    image: "{{ zulip_memcached_image }}"
+    restart: "{{ zulip_restart_policy }}"
+    user: "0:0"
+    command:
+      - "sh"
+      - "-euc"
+      - |
+        echo 'mech_list: plain' > "$${SASL_CONF_PATH}"
+        echo "zulip:$$(cat $${MEMCACHED_PASSWORD_FILE})" > "$${MEMCACHED_SASL_PWDB}"
+        echo "zulip@$${HOSTNAME}:$$(cat $${MEMCACHED_PASSWORD_FILE})" >> "$${MEMCACHED_SASL_PWDB}"
+        echo "zulip@localhost:$$(cat $${MEMCACHED_PASSWORD_FILE})" >> "$${MEMCACHED_SASL_PWDB}"
+        exec memcached -S -u root
+    secrets:
+      - zulip__memcached_password
+    environment:
+      SASL_CONF_PATH: "/home/memcache/memcached.conf"
+      MEMCACHED_SASL_PWDB: "/home/memcache/memcached-sasl-db"
+      MEMCACHED_PASSWORD_FILE: /run/secrets/zulip__memcached_password
+
+  rabbitmq:
+    image: "{{ zulip_rabbitmq_image }}"
+    restart: "{{ zulip_restart_policy }}"
+    command:
+      - "sh"
+      - "-euc"
+      - |
+        export RABBITMQ_DEFAULT_PASS="$$(cat $${RABBITMQ_PASSWORD_FILE})"
+        echo 'default_user = $${RABBITMQ_DEFAULT_USER}' >> /etc/rabbitmq/rabbitmq.conf
+        echo 'default_pass = $${RABBITMQ_DEFAULT_PASS}' >> /etc/rabbitmq/rabbitmq.conf
+        exec docker-entrypoint.sh rabbitmq-server
+    secrets:
+      - zulip__rabbitmq_password
+    environment:
+      RABBITMQ_DEFAULT_USER: "zulip"
+      RABBITMQ_PASSWORD_FILE: /run/secrets/zulip__rabbitmq_password
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq:rw
+
+  redis:
+    image: "{{ zulip_redis_image }}"
+    restart: "{{ zulip_restart_policy }}"
+    command:
+      - "sh"
+      - "-euc"
+      - '/usr/local/bin/docker-entrypoint.sh --requirepass "$$(cat $${REDIS_PASSWORD_FILE})"'
+    secrets:
+      - zulip__redis_password
+    environment:
+      REDIS_PASSWORD_FILE: /run/secrets/zulip__redis_password
+    volumes:
+      - ./data/redis:/data:rw
+
+  zulip:
+    image: "{{ zulip_server_image }}"
+    restart: "{{ zulip_restart_policy }}"
+    ports:
+      - "{{ zulip_http_port }}:80"
+    secrets:
+      - zulip__postgres_password
+      - zulip__memcached_password
+      - zulip__rabbitmq_password
+      - zulip__redis_password
+      - zulip__secret_key
+      - zulip__email_password
+    environment:
+      SETTING_REMOTE_POSTGRES_HOST: "database"
+      SETTING_MEMCACHED_LOCATION: "memcached:11211"
+      SETTING_MEMCACHED_USERNAME: "zulip@localhost"
+      SETTING_RABBITMQ_HOST: "rabbitmq"
+      SETTING_REDIS_HOST: "redis"
+      SETTING_EXTERNAL_HOST: "{{ zulip_external_host }}"
+      LOADBALANCER_IPS: "{{ zulip_loadbalancer_ips | join(',') }}"
+      SETTING_ZULIP_ADMINISTRATOR: "{{ zulip_admin_email }}"
+{% if zulip_email_host | length > 0 %}
+      SETTING_EMAIL_HOST: "{{ zulip_email_host }}"
+{% endif %}
+{% if zulip_email_host_user | length > 0 %}
+      SETTING_EMAIL_HOST_USER: "{{ zulip_email_host_user }}"
+{% endif %}
+    volumes:
+      - ./data/zulip:/data:rw
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1048576
+    depends_on:
+      - database
+      - memcached
+      - rabbitmq
+      - redis
+    networks:
+      - default
+      - core
+      - proxy
+
+secrets:
+  zulip__postgres_password:
+    file: ./secrets/zulip__postgres_password
+  zulip__memcached_password:
+    file: ./secrets/zulip__memcached_password
+  zulip__rabbitmq_password:
+    file: ./secrets/zulip__rabbitmq_password
+  zulip__redis_password:
+    file: ./secrets/zulip__redis_password
+  zulip__secret_key:
+    file: ./secrets/zulip__secret_key
+  zulip__email_password:
+    file: ./secrets/zulip__email_password
+
+networks:
+  core:
+    external: {{ zulip_network_core_external | bool | lower }}
+    name: {{ zulip_network_core_name }}
+  proxy:
+    external: {{ zulip_network_proxy_external | bool | lower }}
+    name: {{ zulip_network_proxy_name }}

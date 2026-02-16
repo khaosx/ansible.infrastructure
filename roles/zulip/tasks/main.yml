@@ -1,0 +1,191 @@
+---
+- name: Deploy and manage Zulip
+  when: zulip_enabled
+  block:
+    - name: Preflight | Ensure Docker Engine is installed
+      ansible.builtin.command:
+        cmd: docker --version
+      changed_when: false
+
+    - name: Preflight | Ensure Docker Compose plugin is installed
+      ansible.builtin.command:
+        cmd: docker compose version
+      changed_when: false
+
+    - name: Assert required Zulip settings are provided
+      ansible.builtin.assert:
+        that:
+          - zulip_external_host | length > 0
+          - zulip_admin_email | length > 0
+          - zulip_admin_password | length > 0
+        fail_msg: >-
+          Provide zulip_external_host, zulip_admin_email, and zulip_admin_password for zulip role.
+
+    - name: Ensure Zulip stack directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop: "{{ zulip_dirs }}"
+
+    - name: Ensure Redis data directory is writable by the Redis container user
+      ansible.builtin.file:
+        path: "{{ zulip_data_dir }}/redis"
+        state: directory
+        owner: "{{ zulip_redis_uid }}"
+        group: "{{ zulip_redis_gid }}"
+        mode: "0755"
+        recurse: true
+
+    - name: UFW | install and allow Zulip profile
+      ansible.builtin.import_role:
+        name: ufw_profiles
+      vars:
+        ufw_profiles_catalog: "{{ zulip_ufw_profiles_catalog }}"
+        ufw_profiles_allow_applications: "{{ zulip_ufw_allow_applications }}"
+      when: zulip_ufw_allow_applications | length > 0
+
+    - name: Build runtime Zulip secret map
+      ansible.builtin.set_fact:
+        zulip_secret_map:
+          zulip__postgres_password: "{{ zulip_postgres_password | default('', true) | ternary(zulip_postgres_password, lookup('community.general.random_string', length=48, special=false)) }}"
+          zulip__memcached_password: "{{ zulip_memcached_password | default('', true) | ternary(zulip_memcached_password, lookup('community.general.random_string', length=48, special=false)) }}"
+          zulip__rabbitmq_password: "{{ zulip_rabbitmq_password | default('', true) | ternary(zulip_rabbitmq_password, lookup('community.general.random_string', length=48, special=false)) }}"
+          zulip__redis_password: "{{ zulip_redis_password | default('', true) | ternary(zulip_redis_password, lookup('community.general.random_string', length=48, special=false)) }}"
+          zulip__secret_key: "{{ zulip_secret_key | default('', true) | ternary(zulip_secret_key, lookup('community.general.random_string', length=64, special=false)) }}"
+          zulip__email_password: "{{ zulip_email_password | default('') }}"
+      no_log: true
+
+    - name: Write Zulip secret files (first-write wins)
+      ansible.builtin.copy:
+        dest: "{{ zulip_secrets_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        owner: root
+        group: root
+        mode: "0600"
+        force: false
+      loop: "{{ zulip_secret_map | dict2items }}"
+      no_log: true
+
+    - name: Render Zulip compose file
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ zulip_stack_dir }}/{{ zulip_compose_filename }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Check Zulip initialization marker
+      ansible.builtin.stat:
+        path: "{{ zulip_initialized_marker }}"
+      register: zulip_initialized
+
+    - name: Start Zulip dependency services for initialization
+      community.docker.docker_compose_v2:
+        project_src: "{{ zulip_stack_dir }}"
+        project_name: "{{ zulip_project_name }}"
+        files:
+          - "{{ zulip_compose_filename }}"
+        services:
+          - database
+          - memcached
+          - rabbitmq
+          - redis
+        state: present
+        pull: "{{ zulip_compose_pull }}"
+      when: not zulip_initialized.stat.exists
+
+    - name: Wait for Zulip Postgres to become ready
+      ansible.builtin.command:
+        cmd: "docker compose -f {{ zulip_compose_filename }} -p {{ zulip_project_name }} exec -T database pg_isready -U zulip"
+        chdir: "{{ zulip_stack_dir }}"
+      register: zulip_pg_isready
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: zulip_pg_isready.rc == 0
+      when: not zulip_initialized.stat.exists
+
+    - name: Initialize Zulip application (one-time)
+      ansible.builtin.command:
+        cmd: "docker compose -f {{ zulip_compose_filename }} -p {{ zulip_project_name }} run --rm zulip app:init"
+        chdir: "{{ zulip_stack_dir }}"
+      when: not zulip_initialized.stat.exists
+
+    - name: Mark Zulip initialized
+      ansible.builtin.file:
+        path: "{{ zulip_initialized_marker }}"
+        state: touch
+        owner: root
+        group: root
+        mode: "0644"
+      when: not zulip_initialized.stat.exists
+
+    - name: Deploy Zulip compose project
+      community.docker.docker_compose_v2:
+        project_src: "{{ zulip_stack_dir }}"
+        project_name: "{{ zulip_project_name }}"
+        files:
+          - "{{ zulip_compose_filename }}"
+        state: present
+        pull: "{{ zulip_compose_pull }}"
+
+    - name: Check Zulip realm count
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ zulip_project_name }}-zulip-1 /bin/bash -lc
+          "su zulip -c '/home/zulip/deployments/current/manage.py shell -c \"from zerver.models import Realm; print(Realm.objects.count())\"'"
+      register: zulip_realm_count
+      changed_when: false
+
+    - name: Create temporary file for bootstrap admin password
+      ansible.builtin.tempfile:
+        state: file
+        prefix: zulip-admin-password-
+      register: zulip_admin_password_tmp
+      when: (zulip_realm_count.stdout | trim | int) == 0
+      no_log: true
+
+    - name: Write bootstrap admin password to temporary file
+      ansible.builtin.copy:
+        dest: "{{ zulip_admin_password_tmp.path }}"
+        content: "{{ zulip_admin_password }}"
+        owner: root
+        group: root
+        mode: "0600"
+      when: (zulip_realm_count.stdout | trim | int) == 0
+      no_log: true
+
+    - name: Copy bootstrap admin password into Zulip container
+      ansible.builtin.command:
+        cmd: >-
+          docker cp {{ zulip_admin_password_tmp.path }} {{ zulip_project_name }}-zulip-1:/tmp/zulip-admin-password
+      when: (zulip_realm_count.stdout | trim | int) == 0
+      no_log: true
+
+    - name: Create initial Zulip realm and admin user
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ zulip_project_name }}-zulip-1 /bin/bash -lc
+          "chown zulip:zulip /tmp/zulip-admin-password &&
+          chmod 600 /tmp/zulip-admin-password &&
+          su zulip -c '/home/zulip/deployments/current/manage.py create_realm \"{{ zulip_realm_name }}\" \"{{ zulip_admin_email }}\" \"{{ zulip_admin_full_name }}\" --string-id \"{{ zulip_realm_string_id }}\" --password-file /tmp/zulip-admin-password --automated'"
+      when: (zulip_realm_count.stdout | trim | int) == 0
+      no_log: true
+
+    - name: Remove bootstrap admin password from Zulip container
+      ansible.builtin.command:
+        cmd: "docker exec {{ zulip_project_name }}-zulip-1 /bin/bash -lc 'rm -f /tmp/zulip-admin-password'"
+      when: (zulip_realm_count.stdout | trim | int) == 0
+      changed_when: false
+
+    - name: Remove temporary bootstrap admin password file
+      ansible.builtin.file:
+        path: "{{ zulip_admin_password_tmp.path }}"
+        state: absent
+      when:
+        - (zulip_realm_count.stdout | trim | int) == 0
+        - zulip_admin_password_tmp.path is defined
+      no_log: true

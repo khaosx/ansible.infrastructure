@@ -1,0 +1,79 @@
+---
+# defaults/main.yml — zulip
+
+zulip_enabled: true
+
+# Project paths
+zulip_project_name: "zulip"
+zulip_stacks_dir: "/opt/stacks"
+zulip_stack_dir: "{{ zulip_stacks_dir }}/{{ zulip_project_name }}"
+zulip_compose_filename: "docker-compose.yml"
+zulip_secrets_dir: "{{ zulip_stack_dir }}/secrets"
+zulip_data_dir: "{{ zulip_stack_dir }}/data"
+zulip_initialized_marker: "{{ zulip_stack_dir }}/.initialized"
+
+# Images
+zulip_server_image: "ghcr.io/zulip/zulip-server:11.5-2"
+zulip_postgres_image: "zulip/zulip-postgresql:14"
+zulip_memcached_image: "memcached:alpine"
+zulip_rabbitmq_image: "rabbitmq:4.2"
+zulip_redis_image: "redis:alpine"
+
+# Runtime
+zulip_restart_policy: "unless-stopped"
+zulip_compose_pull: "always"
+zulip_http_port: 8090
+
+# Core settings
+zulip_external_host: "zulip.{{ site_domain }}"
+zulip_admin_email: "{{ admin_email | default('admin@localdomain') }}"
+zulip_admin_full_name: "{{ app_admin_user | default('Zulip Admin') }}"
+zulip_admin_password: "{{ app_admin_user_pw | default('') }}"
+zulip_realm_name: "{{ site_domain | default('Zulip') }}"
+zulip_realm_string_id: ""
+zulip_loadbalancer_ips:
+  # Docker bridge gateway for the default bridge network is commonly 172.18.0.1.
+  # Zulip validates the client IP against this list when running behind a proxy.
+  - "172.18.0.1"
+  - "{{ site_proxy_int }}"
+
+# Redis (container user) defaults for redis:alpine.
+zulip_redis_uid: 999
+zulip_redis_gid: 1000
+
+# Optional outgoing email
+zulip_email_host: ""
+zulip_email_host_user: ""
+zulip_email_password: ""
+
+# Secret inputs (if left empty, random values are generated on first deploy)
+zulip_postgres_password: ""
+zulip_memcached_password: ""
+zulip_rabbitmq_password: ""
+zulip_redis_password: ""
+zulip_secret_key: ""
+
+# Networks
+zulip_network_core_name: "core"
+zulip_network_proxy_name: "proxy"
+zulip_network_core_external: true
+zulip_network_proxy_external: true
+
+# UFW profiles (role-owned)
+zulip_ufw_profiles_catalog:
+  - name: Zulip
+    title: "Zulip"
+    description: "Zulip team chat"
+    ports:
+      - "{{ zulip_http_port }}/tcp"
+zulip_ufw_allow_applications:
+  - Zulip
+
+zulip_dirs:
+  - "{{ zulip_stack_dir }}"
+  - "{{ zulip_secrets_dir }}"
+  - "{{ zulip_data_dir }}"
+  - "{{ zulip_data_dir }}/zulip"
+  - "{{ zulip_data_dir }}/postgresql"
+  - "{{ zulip_data_dir }}/rabbitmq"
+  - "{{ zulip_data_dir }}/redis"

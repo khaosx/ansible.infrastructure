@@ -1,19 +1,18 @@
 ---
 galaxy_info:
-  role_name: paperless_stack
+  role_name: zulip
   namespace: khaosx
   author: Kris
-  description: Deploy a Paperless-ngx document stack via Docker Compose on Ubuntu.
+  description: Deploy Zulip via official Docker stack with PostgreSQL, Redis, RabbitMQ, and Memcached on Ubuntu.
   license: MIT
   min_ansible_version: "2.15"
   platforms:
     - name: Ubuntu
   galaxy_tags:
-    - paperless
-    - documents
+    - zulip
+    - chat
     - docker
-    - postgres
-    - redis
+    - collaboration
     - ubuntu
 
 dependencies: []
