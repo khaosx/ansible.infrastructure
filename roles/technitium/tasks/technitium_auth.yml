@@ -1,0 +1,191 @@
+---
+
+- name: Assert target Technitium username is configured
+  ansible.builtin.assert:
+    that: technitium_auth_target_user | length > 0
+    fail_msg: "Missing technitium_auth_target_user."
+
+- name: Assert target Technitium password is configured
+  ansible.builtin.assert:
+    that: technitium_auth_target_password | length > 0
+    fail_msg: "Missing technitium_auth_target_password."
+  no_log: true
+
+- name: Try login with desired Technitium credentials
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/user/login"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      user: "{{ technitium_auth_target_user }}"
+      pass: "{{ technitium_auth_target_password }}"
+      totp: ""
+      includeInfo: "true"
+    return_content: true
+    status_code: 200
+  register: technitium_desired_login
+  failed_when: false
+  changed_when: false
+  no_log: true
+
+- name: Cache Technitium API token from desired login (if present)
+  ansible.builtin.set_fact:
+    technitium_auth_api_token: >-
+      {{
+        technitium_desired_login.json.token
+        | default(technitium_desired_login.json.response.token | default(''))
+      }}
+  changed_when: false
+  no_log: true
+
+- name: Determine whether auth reset is required
+  ansible.builtin.set_fact:
+    technitium_auth_reset_required: >-
+      {{
+        (technitium_desired_login.json.status | default('')) != 'ok'
+      }}
+  changed_when: false
+
+- name: Enforce Technitium app-admin credentials
+  when: technitium_auth_reset_required | bool
+  block:
+    - name: Check Technitium auth reset files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ technitium_auth_file }}"
+        - "{{ technitium_auth_reset_file }}"
+      register: technitium_auth_files
+      changed_when: false
+
+    - name: Move auth.config to resetadmin.config
+      ansible.builtin.command:
+        argv:
+          - mv
+          - -f
+          - "{{ technitium_auth_file }}"
+          - "{{ technitium_auth_reset_file }}"
+      when: technitium_auth_files.results[0].stat.exists
+      changed_when: true
+
+    - name: Restart Technitium to apply auth reset marker
+      ansible.builtin.systemd:
+        name: "{{ technitium_service_name }}"
+        state: restarted
+
+    - name: Wait for Technitium HTTP API after auth reset
+      ansible.builtin.wait_for:
+        host: "127.0.0.1"
+        port: "{{ technitium_web_service_http_port }}"
+        timeout: 30
+        state: started
+
+    - name: Login with default admin credentials after reset
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/user/login"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          user: "admin"
+          pass: "admin"
+          totp: ""
+          includeInfo: "true"
+        return_content: true
+        status_code: 200
+      register: technitium_bootstrap_login
+      no_log: true
+
+    - name: Assert bootstrap admin login succeeded
+      ansible.builtin.assert:
+        that:
+          - (technitium_bootstrap_login.json.status | default('')) == 'ok'
+          - (technitium_bootstrap_login.json.token | default('')) | length > 0
+        fail_msg: "Failed to bootstrap Technitium auth with admin/admin after reset."
+      no_log: true
+
+    - name: Read bootstrap admin user details
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/admin/users/get?token={{ technitium_bootstrap_login.json.token }}&user=admin&includeGroups=true"
+        method: GET
+        return_content: true
+        status_code: 200
+      register: technitium_admin_user_get
+      no_log: true
+
+    - name: Build admin group/session defaults
+      ansible.builtin.set_fact:
+        technitium_admin_member_groups_csv: >-
+          {{
+            (technitium_admin_user_get.json.response.memberOfGroups | default(['Administrators']))
+            | join(',')
+          }}
+        technitium_admin_session_timeout: >-
+          {{
+            technitium_admin_user_get.json.response.sessionTimeoutSeconds
+            | default(1800)
+          }}
+      changed_when: false
+
+    - name: Rename bootstrap admin user to target username
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/admin/users/set"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          token: "{{ technitium_bootstrap_login.json.token }}"
+          user: "admin"
+          newUser: "{{ technitium_auth_target_user }}"
+          displayName: "{{ technitium_auth_target_display_name }}"
+          disabled: "false"
+          sessionTimeoutSeconds: "{{ technitium_admin_session_timeout }}"
+          memberOfGroups: "{{ technitium_admin_member_groups_csv }}"
+        return_content: true
+        status_code: 200
+      when: technitium_auth_target_user != 'admin'
+      no_log: true
+
+    - name: Set password for target Technitium user
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/admin/users/set"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          token: "{{ technitium_bootstrap_login.json.token }}"
+          user: "{{ technitium_auth_target_user }}"
+          newPass: "{{ technitium_auth_target_password }}"
+        return_content: true
+        status_code: 200
+      no_log: true
+
+    - name: Verify desired Technitium credentials now work
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/user/login"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          user: "{{ technitium_auth_target_user }}"
+          pass: "{{ technitium_auth_target_password }}"
+          totp: ""
+          includeInfo: "true"
+        return_content: true
+        status_code: 200
+      register: technitium_desired_login_verify
+      no_log: true
+
+    - name: Cache Technitium API token after reset flow
+      ansible.builtin.set_fact:
+        technitium_auth_api_token: >-
+          {{
+            technitium_desired_login_verify.json.token
+            | default(technitium_desired_login_verify.json.response.token | default(''))
+          }}
+      changed_when: false
+      no_log: true
+
+    - name: Assert desired Technitium credentials verified
+      ansible.builtin.assert:
+        that:
+          - (technitium_desired_login_verify.json.status | default('')) == 'ok'
+          - (technitium_desired_login_verify.json.token | default('')) | length > 0
+        fail_msg: "Desired Technitium credentials could not be verified after reset."
+      no_log: true

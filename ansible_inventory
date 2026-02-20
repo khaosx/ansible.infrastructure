@@ -26,6 +26,10 @@ all:
       ansible_host: 10.0.20.90
     monitor-01:
       ansible_host: 10.0.20.91
+    dns-01:
+      ansible_host: 10.0.10.2
+    dns-02:
+      ansible_host: 10.0.10.3
 
   children:
     linux_servers:
@@ -58,6 +62,13 @@ all:
 
     technitium_dns:
       hosts:
+        dns-01:
+        dns-02:
+
+    dns_servers:
+      hosts:
+        dns-01:
+        dns-02:
 
     ai_servers:
       hosts:

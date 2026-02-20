@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LINEAGE="${RENEWED_LINEAGE:-/etc/letsencrypt/live/{{ technitium_tls_domain }}}"
+PFX_PATH="{{ technitium_tls_pfx_path }}"
+PASS_FILE="{{ technitium_tls_pfx_pass_file }}"
+
+install -d -m 0700 "$(dirname "$PFX_PATH")"
+
+openssl pkcs12 -export \
+  -in "$LINEAGE/fullchain.pem" \
+  -inkey "$LINEAGE/privkey.pem" \
+  -out "$PFX_PATH" \
+  -passout "file:$PASS_FILE"
+
+chmod 0600 "$PFX_PATH"

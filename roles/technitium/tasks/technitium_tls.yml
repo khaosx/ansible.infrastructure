@@ -1,0 +1,288 @@
+---
+
+- name: Assert Cloudflare token present
+  ansible.builtin.assert:
+    that: technitium_tls_cloudflare_api_token | length > 0
+    fail_msg: "Missing Cloudflare token (technitium_tls_cloudflare_api_token)."
+  no_log: true
+
+- name: Assert TLS email present
+  ansible.builtin.assert:
+    that: technitium_tls_email | length > 0
+    fail_msg: "Missing TLS email (technitium_tls_email)."
+
+- name: Assert TLS domain present
+  ansible.builtin.assert:
+    that: technitium_tls_domain | length > 0
+    fail_msg: "Missing base domain (technitium_tls_domain)."
+
+- name: Assert PFX password present
+  ansible.builtin.assert:
+    that: technitium_tls_pfx_password | length > 0
+    fail_msg: "Missing PFX password (technitium_tls_pfx_password)."
+  no_log: true
+
+- name: Install certbot + DNS plugin
+  ansible.builtin.apt:
+    name: "{{ technitium_tls_packages }}"
+    state: present
+    update_cache: true
+
+- name: Create Cloudflare credentials directory
+  ansible.builtin.file:
+    path: "{{ technitium_tls_cf_creds_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Write Cloudflare credentials
+  ansible.builtin.template:
+    src: cloudflare.ini.j2
+    dest: "{{ technitium_tls_cf_creds_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Ensure Technitium SSL directory exists
+  ansible.builtin.file:
+    path: "{{ technitium_tls_ssl_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Write PFX password file
+  ansible.builtin.copy:
+    dest: "{{ technitium_tls_pfx_pass_file }}"
+    content: "{{ technitium_tls_pfx_password }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Check if live cert already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ technitium_tls_domain }}/fullchain.pem"
+  register: technitium_live_cert
+
+- name: Initialize certbot domain args
+  ansible.builtin.set_fact:
+    technitium_certbot_domain_args: []
+  changed_when: false
+
+- name: Build certbot domain args
+  ansible.builtin.set_fact:
+    technitium_certbot_domain_args: "{{ technitium_certbot_domain_args + ['-d', item] }}"
+  loop: "{{ technitium_tls_domains }}"
+  changed_when: false
+
+- name: Obtain wildcard certificate from Let's Encrypt
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          '/usr/bin/certbot',
+          'certonly',
+          '--non-interactive',
+          '--agree-tos',
+          '--email',
+          technitium_tls_email,
+          '--dns-cloudflare',
+          '--dns-cloudflare-credentials',
+          technitium_tls_cf_creds_file,
+          '--dns-cloudflare-propagation-seconds',
+          technitium_tls_dns_propagation_seconds | string,
+          '--server',
+          technitium_tls_acme_directory_urls[technitium_tls_acme_server]
+        ] + technitium_certbot_domain_args
+      }}
+  register: technitium_certbot_issue
+  retries: "{{ technitium_tls_issue_retries | int + 1 }}"
+  delay: "{{ technitium_tls_issue_delay_seconds | int }}"
+  until: technitium_certbot_issue.rc == 0
+  changed_when: not technitium_live_cert.stat.exists
+  when: not technitium_live_cert.stat.exists
+
+- name: Ensure Certbot deploy-hook directory exists
+  ansible.builtin.file:
+    path: /etc/letsencrypt/renewal-hooks/deploy
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Technitium deploy hook for renewals
+  ansible.builtin.template:
+    src: technitium-pfx.sh.j2
+    dest: "{{ technitium_tls_deploy_hook_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Check if Technitium PFX exists
+  ansible.builtin.stat:
+    path: "{{ technitium_tls_pfx_path }}"
+  register: technitium_pfx_stat
+
+- name: Generate Technitium PFX from live cert
+  ansible.builtin.command:
+    cmd: "{{ technitium_tls_deploy_hook_path }}"
+  environment:
+    RENEWED_LINEAGE: "/etc/letsencrypt/live/{{ technitium_tls_domain }}"
+  register: technitium_pfx_generate
+  changed_when: true
+  when:
+    - technitium_live_cert.stat.exists or (technitium_certbot_issue is defined and technitium_certbot_issue.rc == 0)
+    - not technitium_pfx_stat.stat.exists or (technitium_certbot_issue is defined and technitium_certbot_issue.changed)
+
+- name: Report Technitium PFX paths
+  ansible.builtin.debug:
+    msg: >-
+      Technitium PFX: {{ technitium_tls_pfx_path }}
+      | PFX password file: {{ technitium_tls_pfx_pass_file }}
+
+- name: Configure web TLS binding in Technitium API
+  when: technitium_configure_web_tls_via_api | bool
+  block:
+    - name: Reuse API token from auth workflow when available
+      ansible.builtin.set_fact:
+        technitium_api_token: "{{ technitium_auth_api_token | default('') }}"
+      changed_when: false
+      no_log: true
+
+    - name: Assert Technitium API password present
+      ansible.builtin.assert:
+        that: technitium_api_password | length > 0
+        fail_msg: "Missing Technitium API password (technitium_api_password)."
+      no_log: true
+
+    - name: Login to Technitium API with candidate credentials
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/user/login"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          user: "{{ item.user }}"
+          pass: "{{ item.pass }}"
+          totp: ""
+          includeInfo: "true"
+        return_content: true
+        status_code: 200
+      loop: "{{ technitium_api_login_candidates }}"
+      register: technitium_api_login_attempts
+      failed_when: false
+      changed_when: false
+      when: technitium_api_token | length == 0
+      no_log: true
+
+    - name: Select successful Technitium API token
+      ansible.builtin.set_fact:
+        technitium_api_login_result: >-
+          {{
+            (
+              (technitium_api_login_attempts.results | selectattr('json.token', 'defined') | list)
+              +
+              (technitium_api_login_attempts.results | selectattr('json.response.token', 'defined') | list)
+            ) | first | default({})
+          }}
+        technitium_api_token_discovered: >-
+          {{
+            technitium_api_login_result.json.token
+            | default(technitium_api_login_result.json.response.token | default(''))
+          }}
+      changed_when: false
+      when: technitium_api_token | length == 0
+      no_log: true
+
+    - name: Promote discovered API token
+      ansible.builtin.set_fact:
+        technitium_api_token: "{{ technitium_api_token_discovered }}"
+      changed_when: false
+      when:
+        - technitium_api_token | length == 0
+        - technitium_api_token_discovered is defined
+      no_log: true
+
+    - name: Assert Technitium API token was acquired
+      ansible.builtin.assert:
+        that: technitium_api_token | length > 0
+        fail_msg: "Technitium API login failed with all configured credential candidates."
+      no_log: true
+
+    - name: Read current Technitium settings
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/settings/get?token={{ technitium_api_token }}&node="
+        method: GET
+        return_content: true
+        status_code: 200
+      register: technitium_settings_get
+      no_log: true
+
+    - name: Build target web service values
+      ansible.builtin.set_fact:
+        technitium_web_service_local_addresses_effective: >-
+          {{
+            technitium_web_service_local_addresses
+            if (technitium_web_service_local_addresses | trim | length > 0)
+            else (
+              (technitium_settings_get.json.response.webServiceLocalAddresses | default(['0.0.0.0', '[::]']))
+              | join(',')
+            )
+          }}
+        technitium_web_service_real_ip_header_effective: >-
+          {{
+            technitium_web_service_real_ip_header
+            if (technitium_web_service_real_ip_header | trim | length > 0)
+            else (technitium_settings_get.json.response.webServiceRealIpHeader | default('X-Real-IP'))
+          }}
+      changed_when: false
+
+    - name: Determine whether web TLS settings need update
+      ansible.builtin.set_fact:
+        technitium_web_tls_needs_update: >-
+          {{
+            (not (technitium_settings_get.json.response.webServiceEnableTls | bool))
+            or ((technitium_settings_get.json.response.webServiceTlsPort | int) != (technitium_web_service_tls_port | int))
+            or ((technitium_settings_get.json.response.webServiceTlsCertificatePath | default('')) != technitium_tls_pfx_path)
+            or ((technitium_settings_get.json.response.webServiceHttpToTlsRedirect | bool) != (technitium_web_service_http_to_tls_redirect | bool))
+            or ((technitium_settings_get.json.response.webServiceEnableHttp3 | bool) != (technitium_web_service_enable_http3 | bool))
+          }}
+      changed_when: false
+
+    - name: Configure Technitium web TLS settings
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_web_service_http_port }}/api/settings/set?token={{ technitium_api_token }}"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          node: ""
+          webServiceLocalAddresses: "{{ technitium_web_service_local_addresses_effective }}"
+          webServiceHttpPort: "{{ technitium_web_service_http_port }}"
+          webServiceEnableTls: "{{ (true) | ternary('true', 'false') }}"
+          webServiceEnableHttp3: "{{ (technitium_web_service_enable_http3 | bool) | ternary('true', 'false') }}"
+          webServiceHttpToTlsRedirect: "{{ (technitium_web_service_http_to_tls_redirect | bool) | ternary('true', 'false') }}"
+          webServiceUseSelfSignedTlsCertificate: "false"
+          webServiceTlsPort: "{{ technitium_web_service_tls_port }}"
+          webServiceTlsCertificatePath: "{{ technitium_tls_pfx_path }}"
+          webServiceTlsCertificatePassword: "{{ technitium_tls_pfx_password }}"
+          webServiceRealIpHeader: "{{ technitium_web_service_real_ip_header_effective }}"
+        return_content: true
+        status_code: 200
+      register: technitium_web_tls_set
+      changed_when: technitium_web_tls_needs_update | bool
+      when: technitium_web_tls_needs_update | bool
+      no_log: true
+      notify: Restart Technitium DNS
+
+    - name: Flush handlers after web TLS settings change
+      ansible.builtin.meta: flush_handlers
+      when: technitium_web_tls_needs_update | bool
+
+    - name: Wait for Technitium HTTPS listener
+      ansible.builtin.wait_for:
+        host: "127.0.0.1"
+        port: "{{ technitium_web_service_tls_port }}"
+        timeout: 30
+        state: started

@@ -1,0 +1,74 @@
+---
+
+- name: "Ensure Technitium installer dependencies"
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: "Check for Technitium systemd unit"
+  ansible.builtin.stat:
+    path: "{{ technitium_service_unit_path }}"
+  register: technitium_service_unit
+
+- name: "Download Technitium install script"
+  ansible.builtin.get_url:
+    url: "{{ technitium_install_script_url }}"
+    dest: "{{ technitium_install_script_path }}"
+    mode: "0755"
+  when: not technitium_service_unit.stat.exists
+
+- name: "Run Technitium installer"
+  ansible.builtin.command:
+    cmd: "{{ technitium_install_script_path }}"
+  args:
+    creates: "{{ technitium_service_unit_path }}"
+  register: technitium_install
+  when: not technitium_service_unit.stat.exists
+  notify: Restart Technitium DNS
+
+- name: "Check Technitium systemd unit source"
+  ansible.builtin.stat:
+    path: "{{ technitium_service_unit_src }}"
+  register: technitium_service_unit_src_stat
+  changed_when: false
+
+- name: "Fail if Technitium systemd unit source is missing"
+  ansible.builtin.fail:
+    msg: "Technitium systemd unit source not found at {{ technitium_service_unit_src }}."
+  when: not technitium_service_unit_src_stat.stat.exists
+
+- name: "Install Technitium systemd unit"
+  ansible.builtin.copy:
+    src: "{{ technitium_service_unit_src }}"
+    dest: "{{ technitium_service_unit_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    remote_src: true
+
+- name: "Check for running Technitium process"
+  ansible.builtin.command:
+    cmd: "pgrep -f /opt/technitium/dns/DnsServerApp.dll"
+  register: technitium_running
+  changed_when: false
+  failed_when: false
+
+- name: "Stop existing Technitium process before systemd"
+  ansible.builtin.command:
+    cmd: "pkill -f /opt/technitium/dns/DnsServerApp.dll"
+  register: technitium_kill
+  changed_when: technitium_kill.rc == 0
+  failed_when: false
+  when:
+    - technitium_running.rc == 0
+    - not technitium_service_unit.stat.exists
+
+- name: "Ensure Technitium service enabled and running"
+  ansible.builtin.systemd:
+    name: "{{ technitium_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

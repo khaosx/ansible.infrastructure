@@ -1,0 +1,11 @@
+---
+
+- name: Restart Technitium DNS
+  ansible.builtin.systemd:
+    name: "{{ technitium_service_name }}"
+    state: restarted
+
+- name: Restart systemd-resolved
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: restarted

@@ -1,0 +1,100 @@
+---
+
+- name: UFW | install and allow Technitium profile
+  ansible.builtin.import_role:
+    name: ufw_profiles
+  vars:
+    ufw_profiles_catalog: "{{ technitium_ufw_profiles_catalog }}"
+    ufw_profiles_allow_applications: "{{ technitium_ufw_allow_applications }}"
+  when: technitium_ufw_allow_applications | length > 0
+
+- name: Add DNS nodes to /etc/hosts
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} dns nodes"
+    block: |
+      {% for node in technitium_dns_nodes %}
+      {{ node.ip }} {{ node.names | join(' ') }}
+      {% endfor %}
+  when:
+    - technitium_manage_hosts_entries | bool
+    - technitium_dns_nodes | length > 0
+
+- name: Disable systemd-resolved stub listener
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^#?DNSStubListener='
+    line: DNSStubListener=no
+  notify: Restart systemd-resolved
+  when: technitium_disable_resolved_stub_listener | bool
+
+- name: Ensure resolv.conf points to systemd-resolved
+  become: true
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+  when: technitium_manage_resolv_conf | bool
+
+- name: Apply resolver handler changes before port checks
+  ansible.builtin.meta: flush_handlers
+  when: technitium_disable_resolved_stub_listener | bool
+
+- name: Check listeners on port 53
+  become: true
+  ansible.builtin.command: ss -lntup
+  register: technitium_ss_listen
+  changed_when: false
+
+- name: Build list of conflicting port 53 listeners
+  ansible.builtin.set_fact:
+    technitium_port53_conflicts: >-
+      {{
+        technitium_ss_listen.stdout_lines
+        | select('search', ':53')
+        | reject('search', 'systemd-resolve')
+        | list
+      }}
+  changed_when: false
+
+- name: Check for existing Technitium process
+  become: true
+  ansible.builtin.command:
+    cmd: "pgrep -f /opt/technitium/dns/DnsServerApp.dll"
+  register: technitium_process
+  changed_when: false
+  failed_when: false
+
+- name: Check if Technitium is already installed
+  ansible.builtin.stat:
+    path: "{{ technitium_service_unit_path }}"
+  register: technitium_service_unit_main
+  changed_when: false
+
+- name: Assert port 53 is free
+  ansible.builtin.assert:
+    that:
+      - technitium_port53_conflicts | length == 0
+    fail_msg: >-
+      Port 53 has conflicting listeners: {{ technitium_port53_conflicts | join('; ') }}.
+      Stop or reconfigure those listeners before continuing.
+  when:
+    - not technitium_service_unit_main.stat.exists
+    - technitium_process.rc != 0
+
+- name: "Install Technitium DNS Server"
+  ansible.builtin.import_tasks: install_technitium.yml
+  tags: [technitium, install]
+
+- name: "Configure Technitium auth"
+  ansible.builtin.import_tasks: technitium_auth.yml
+  when: technitium_manage_auth | bool
+  tags: [technitium, auth]
+
+- name: "Configure Technitium TLS"
+  ansible.builtin.import_tasks: technitium_tls.yml
+  when: technitium_tls_enabled | bool
+  tags: [technitium, tls]

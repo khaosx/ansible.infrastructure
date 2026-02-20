@@ -1,0 +1,115 @@
+---
+# defaults/main.yml — technitium
+# Defaults for Technitium DNS Server (bare-metal) with TLS via Let's Encrypt.
+
+# Installation
+technitium_service_name: "technitium-dns"
+technitium_service_unit_path: "/etc/systemd/system/technitium-dns.service"
+technitium_service_unit_src: "/opt/technitium/dns/systemd.service"
+technitium_install_script_url: "https://download.technitium.com/dns/install.sh"
+technitium_install_script_path: "/tmp/technitium-install.sh"
+
+# UFW
+technitium_ufw_profiles_catalog:
+  - name: Technitium
+    title: "Technitium DNS"
+    description: "DNS and management UI"
+    ports:
+      - "53"
+      - "67/udp"
+      - "5380/tcp"
+      - "53443/tcp"
+technitium_ufw_allow_applications:
+  - Technitium
+
+# /etc/hosts entries for DNS nodes
+technitium_manage_hosts_entries: true
+technitium_dns_nodes:
+  - ip: "10.0.10.2"
+    names:
+      - "dns-01.khaosx.io"
+      - "dns-01"
+  - ip: "10.0.10.3"
+    names:
+      - "dns-02.khaosx.io"
+      - "dns-02"
+
+# systemd-resolved handling
+technitium_disable_resolved_stub_listener: true
+technitium_manage_resolv_conf: true
+
+# Technitium UI/API auth enforcement
+technitium_manage_auth: true
+technitium_auth_target_user: "{{ app_admin_user | default('admin') | lower }}"
+technitium_auth_target_display_name: "{{ app_admin_user | default('admin') }}"
+technitium_auth_target_password: "{{ app_admin_user_pw | default('') }}"
+technitium_auth_config_dir: "/etc/dns"
+technitium_auth_file: "{{ technitium_auth_config_dir }}/auth.config"
+technitium_auth_reset_file: "{{ technitium_auth_config_dir }}/resetadmin.config"
+
+# TLS via Let's Encrypt (DNS-01 / Cloudflare)
+technitium_tls_enabled: true
+technitium_tls_email: "{{ configure_ssl_email | default('') }}"
+technitium_tls_cloudflare_api_token: "{{ configure_ssl_cloudflare_api_token | default('') }}"
+
+technitium_tls_cf_creds_dir: "/root/.secrets"
+technitium_tls_cf_creds_file: "{{ technitium_tls_cf_creds_dir }}/cloudflare.ini"
+
+# Per-node cert identity:
+# - if inventory_hostname is already an FQDN, use it directly
+# - otherwise compose inventory_hostname.site_domain
+technitium_tls_domain: >-
+  {{
+    inventory_hostname
+    if ('.' in inventory_hostname)
+    else (inventory_hostname ~ '.' ~ (site_domain | default('')))
+  }}
+technitium_tls_domains:
+  - "{{ technitium_tls_domain }}"
+
+technitium_tls_packages:
+  - certbot
+  - python3-certbot-dns-cloudflare
+  - openssl
+
+technitium_tls_dns_propagation_seconds: 60
+technitium_tls_issue_retries: 2
+technitium_tls_issue_delay_seconds: 10
+
+# ACME server: "production" or "staging"
+# Change commenting below to swap to/from staging
+technitium_tls_acme_server: "production"
+# technitium_tls_acme_server: "staging"
+
+technitium_tls_acme_directory_urls:
+  production: "https://acme-v02.api.letsencrypt.org/directory"
+  staging: "https://acme-staging-v02.api.letsencrypt.org/directory"
+
+# PFX output
+technitium_tls_ssl_dir: "/etc/technitium/dns/ssl"
+technitium_tls_pfx_pass_file: "{{ technitium_tls_ssl_dir }}/pfx-pass"
+technitium_tls_pfx_password: "{{ app_admin_user_pw | default('') }}"
+technitium_tls_pfx_path: "{{ technitium_tls_ssl_dir }}/dns.pfx"
+technitium_tls_deploy_hook_path: "/etc/letsencrypt/renewal-hooks/deploy/technitium-pfx.sh"
+
+# Technitium web service TLS binding (API-driven)
+technitium_web_service_http_port: 5380
+technitium_web_service_tls_port: 53443
+technitium_web_service_local_addresses: "0.0.0.0,[::]"
+technitium_web_service_http_to_tls_redirect: false
+technitium_web_service_enable_http3: false
+technitium_web_service_real_ip_header: "X-Real-IP"
+technitium_configure_web_tls_via_api: true
+
+# API auth used to apply web service TLS settings.
+technitium_api_username: "{{ app_admin_user | default('admin') }}"
+technitium_api_password: "{{ app_admin_user_pw | default('') }}"
+technitium_api_login_candidates:
+  - user: "{{ technitium_api_username | lower }}"
+    pass: "{{ technitium_api_password }}"
+  - user: "admin"
+    pass: "{{ technitium_api_password }}"
+  - user: "admin"
+    pass: "admin"
+  - user: "{{ technitium_api_username | lower }}"
+    pass: "admin"

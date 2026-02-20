@@ -35,6 +35,15 @@
     - role: pihole_v6
       tags: [infra, services, dns]
 
+# Technitium DNS Deployment
+- name: Deploy Technitium DNS Servers
+  hosts: technitium_dns
+  gather_facts: true
+  become: true
+  roles:
+    - role: technitium
+      tags: [infra, services, dns, technitium]
+
 # Nebula Sync Deployment
 - name: Deploy nebula-sync on infrastructure-01
   hosts: infrastructure-01
@@ -79,12 +88,3 @@
   roles:
     - role: zulip
       tags: [zulip, chat]
-
-# Monitoring Stack Deployment
-- name: Deploy Monitoring Stack (Prometheus + Grafana + Loki)
-  hosts: monitoring_stack
-  gather_facts: true
-  become: true
-  roles:
-    - role: monitoring_stack
-      tags: [monitoring, prometheus, grafana, loki]
