@@ -41,3 +41,7 @@ roles:
   - name: paperless_stack
     src: https://github.com/khaosx/ansible.role.paperless_stack.git
     scm: git
+
+  - name: kubernetes
+    src: https://github.com/khaosx/ansible.role.kubernetes.git
+    scm: git
