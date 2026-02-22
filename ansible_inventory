@@ -4,6 +4,24 @@ all:
       ansible_host: 10.0.10.5
     pihole-02:
       ansible_host: 10.0.10.6
+    ctrl-01:
+      ansible_host: 10.0.20.81
+      kubernetes_role: control_plane
+    ctrl-02:
+      ansible_host: 10.0.20.82
+      kubernetes_role: control_plane
+    ctrl-03:
+      ansible_host: 10.0.20.83
+      kubernetes_role: control_plane
+    work-01:
+      ansible_host: 10.0.20.84
+      kubernetes_role: worker
+    work-02:
+      ansible_host: 10.0.20.85
+      kubernetes_role: worker
+    work-03:
+      ansible_host: 10.0.20.86
+      kubernetes_role: worker
     jarvis-ai:
       ansible_host: 10.0.10.42
     fire:
@@ -20,12 +38,6 @@ all:
       ansible_host: 10.0.20.89
     paperless-01:
       ansible_host: 10.0.20.87
-    test-server:
-      ansible_host: 10.0.20.88
-    proxy-int:
-      ansible_host: 10.0.20.90
-    monitor-01:
-      ansible_host: 10.0.20.91
     dns-01:
       ansible_host: 10.0.10.2
     dns-02:
@@ -41,20 +53,35 @@ all:
         ai_servers:
         raspberry_pi_4:
         docker:
+        kubernetes:
+
+    kubernetes:
+      children:
+        kubernetes_control_plane:
+        kubernetes_workers:
+
+    kubernetes_control_plane:
+      hosts:
+        ctrl-01:
+        ctrl-02:
+        ctrl-03:
+
+    kubernetes_workers:
+      hosts:
+        work-01:
+        work-02:
+        work-03:
 
     core_servers:
       hosts:
         infrastructure-01:
         concierge:
         paperless-01:
-        proxy-int:
-        monitor-01:
 
     pihole:
       hosts:
         pihole-01:
         pihole-02:
-        test-server:
 
     paperless:
       hosts:
@@ -86,9 +113,6 @@ all:
         infrastructure-01:
         concierge:
         paperless-01:
-        test-server:
-        proxy-int:
-        monitor-01:
         fire:
         air:
         water:

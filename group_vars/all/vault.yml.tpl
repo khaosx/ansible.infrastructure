@@ -25,6 +25,10 @@ vault_app_admin_user_pw: "op://khaosx-infrastructure/Application Admin User/pass
 vault_configure_ssl_email: "op://khaosx-infrastructure/Cloudflare API Key - khaosx.io/email"
 vault_configure_ssl_cloudflare_api_token: "op://khaosx-infrastructure/Cloudflare API Key - khaosx.io/api_token_secret"
 
+# Kubernetes secrets
+vault_kubernetes_keepalived_password: "op://khaosx-infrastructure/Kubernetes Secrets/keepalived_password"
+vault_kubernetes_ceph_user_key: "op://khaosx-infrastructure/Kubernetes Secrets/ceph_user_key"
+
 # Pi-hole web UI password hashes (Balloon-SHA256)
 vault_pihole_webserver_pwhash: "op://khaosx-infrastructure/Pi-hole Web Password Hashes/webserver_pwhash"
 vault_pihole_webserver_app_pwhash: "op://khaosx-infrastructure/Pi-hole Web Password Hashes/webserver_app_pwhash"
