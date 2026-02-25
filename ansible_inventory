@@ -36,8 +36,6 @@ all:
       ansible_host: 10.0.20.96
     concierge:
       ansible_host: 10.0.20.89
-    paperless-01:
-      ansible_host: 10.0.20.87
     dns-01:
       ansible_host: 10.0.10.2
     dns-02:
@@ -48,7 +46,6 @@ all:
       children:
         core_servers:
         pihole:
-        paperless:
         technitium_dns:
         ai_servers:
         raspberry_pi_4:
@@ -76,16 +73,11 @@ all:
       hosts:
         infrastructure-01:
         concierge:
-        paperless-01:
 
     pihole:
       hosts:
         pihole-01:
         pihole-02:
-
-    paperless:
-      hosts:
-        paperless-01:
 
     technitium_dns:
       hosts:
@@ -112,7 +104,6 @@ all:
       hosts:
         infrastructure-01:
         concierge:
-        paperless-01:
         fire:
         air:
         water:
