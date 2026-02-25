@@ -19,7 +19,7 @@ collections/
 
 # Exclude downloaded roles
 # Uncomment the line below if you download 3rd party roles into ./roles
-# roles/*
+roles/*
 
 # -----------------------------------------------------------------------------
 # IDE / Editor (VS Code)
@@ -80,3 +80,5 @@ id_ed25519
 # Misc
 # -----------------------------------------------------------------------------
 .git/
+mediaops.compose
+mediaops.env

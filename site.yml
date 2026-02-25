@@ -71,15 +71,6 @@
     - role: notification_stack
       tags: [notifications, mailrise, apprise]
 
-# Homepage Deployment
-- name: Deploy Homepage Dashboard
-  hosts: homepage
-  gather_facts: true
-  become: true
-  roles:
-    - role: homepage
-      tags: [homepage, dashboard]
-
 # Zulip Deployment
 - name: Deploy Zulip Chat
   hosts: zulip
@@ -98,3 +89,30 @@
   roles:
     - role: kubernetes
       tags: [kubernetes, k8s]
+
+# Kubernetes Services Deployment
+- name: Deploy Kubernetes Services
+  hosts: kubernetes
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Deploy workloads through k8s-services role
+      ansible.builtin.import_role:
+        name: k8s-services
+      run_once: true
+      tags: [k8s-services, workloads, homepage]
+
+    - name: Deploy arrstack workloads through k8s-arrstack role
+      ansible.builtin.import_role:
+        name: k8s-arrstack
+      run_once: true
+      tags: [k8s-arrstack, workloads, arrstack, sonarr]
+
+# Paperless Kubernetes Deployment
+- name: Deploy Paperless on Kubernetes
+  hosts: ctrl-01
+  gather_facts: false
+  become: true
+  roles:
+    - role: k8s-paperless
+      tags: [k8s, paperless]

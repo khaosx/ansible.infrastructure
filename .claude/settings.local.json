@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/kris/projects/terraform.infrastructure && terraform plan 2>&1)",
+      "Bash(cd /Users/kris/projects/terraform.infrastructure && terraform init 2>&1)",
+      "Bash(terraform plan:*)",
+      "Bash(terraform apply:*)",
+      "Bash(terraform init 2>&1 && terraform plan 2>&1)",
+      "Bash(head:*)",
+      "Bash(op item:*)"
+    ]
+  }
+}

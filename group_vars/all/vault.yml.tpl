@@ -36,3 +36,31 @@ vault_pihole_webserver_app_pwhash: "op://khaosx-infrastructure/Pi-hole Web Passw
 # Paperless secrets
 vault_paperless_db_password: "op://khaosx-infrastructure/Paperless Secrets/paperless_db_password"
 vault_paperless_secret_key: "op://khaosx-infrastructure/Paperless Secrets/paperless_secret_key"
+
+# Paperless Kubernetes secrets
+vault_paperless_db_pass: "op://khaosx-infrastructure/Paperless K8s Secrets/db_pass"
+vault_paperless_gpt_api_key: "op://khaosx-infrastructure/Paperless K8s Secrets/gpt_api_key"
+
+# Homepage service secrets
+vault_homepage_pihole_api_key: "op://khaosx-infrastructure/Pihole API Key/password"
+vault_homepage_npm_username: "op://khaosx-infrastructure/Nginx Proxy Manager - Secrets/username"
+vault_homepage_npm_password: "op://khaosx-infrastructure/Nginx Proxy Manager - Secrets/password"
+vault_homepage_proxmox_username: "op://khaosx-infrastructure/Proxmox Homepage Monitor API/username"
+vault_homepage_proxmox_password: "op://khaosx-infrastructure/Proxmox Homepage Monitor API/password"
+vault_homepage_pbs_username: "op://khaosx-infrastructure/Proxmox PBS Homepage Monitor API/username"
+vault_homepage_pbs_password: "op://khaosx-infrastructure/Proxmox PBS Homepage Monitor API/password"
+vault_homepage_synology_username: "op://khaosx-infrastructure/Synology Homepage Monitoring User/username"
+vault_homepage_synology_password: "op://khaosx-infrastructure/Synology Homepage Monitoring User/password"
+vault_homepage_plex_key: "op://khaosx-infrastructure/MediaOps Secrets/plex key"
+vault_homepage_tautulli_key: "op://khaosx-infrastructure/MediaOps Secrets/tautulli key"
+vault_homepage_overseerr_key: "op://khaosx-infrastructure/MediaOps Secrets/overseerr"
+vault_homepage_sonarr_hd_key: "op://khaosx-infrastructure/MediaOps Secrets/sonarr hd key"
+vault_homepage_radarr_hd_key: "op://khaosx-infrastructure/MediaOps Secrets/radarr hd key"
+vault_homepage_radarr_4k_key: "op://khaosx-infrastructure/MediaOps Secrets/radarr 4k"
+vault_homepage_sonarr_anime_key: "op://khaosx-infrastructure/MediaOps Secrets/sonarr anime key"
+vault_homepage_audiobookshelf_key: "op://khaosx-infrastructure/MediaOps Secrets/audiobookshelf key"
+vault_homepage_prowlarr_key: "op://khaosx-infrastructure/MediaOps Secrets/prowlarr key"
+vault_homepage_sabnzbd_key: "op://khaosx-infrastructure/MediaOps Secrets/sabnzbd key"
+vault_homepage_openweathermap_key: "op://khaosx-infrastructure/Weather API Key/key"
+vault_homepage_weatherapi_key: "op://khaosx-infrastructure/Weather API Key/key"
+vault_homepage_unifi_api_key: "op://khaosx-infrastructure/Unifi API token - RO Monitoring/api_token_secret"

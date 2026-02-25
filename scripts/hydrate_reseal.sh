@@ -33,6 +33,6 @@ ansible-vault decrypt --vault-password-file "${vault_pass_file}" "${out}" >/dev/
 op inject -i "${tpl}" -o "${out}" -f
 
 # Re-seal the hydrated file
-ansible-vault encrypt --vault-password-file "${vault_pass_file}" "${out}"
+ansible-vault encrypt --encrypt-vault-id default --vault-password-file "${vault_pass_file}" "${out}"
 
 echo "Hydrated and sealed: ${out}"
