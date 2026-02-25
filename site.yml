@@ -90,29 +90,29 @@
     - role: kubernetes
       tags: [kubernetes, k8s]
 
-# Kubernetes Services Deployment
-- name: Deploy Kubernetes Services
+# Kubernetes Workloads Deployment
+- name: Deploy Kubernetes Workloads
   hosts: kubernetes
   gather_facts: false
   become: true
   tasks:
-    - name: Deploy workloads through k8s-services role
+    - name: Deploy Homepage through k8s_homepage role
       ansible.builtin.import_role:
-        name: k8s-services
+        name: k8s_homepage
       run_once: true
-      tags: [k8s-services, workloads, homepage]
+      tags: [k8s_homepage, homepage]
 
-    - name: Deploy arrstack workloads through k8s-arrstack role
-      ansible.builtin.import_role:
-        name: k8s-arrstack
-      run_once: true
-      tags: [k8s-arrstack, workloads, arrstack, sonarr]
+#     - name: Deploy arrstack workloads through k8s-arrstack role
+#       ansible.builtin.import_role:
+#         name: k8s-arrstack
+#       run_once: true
+#       tags: [k8s-arrstack, workloads, arrstack, sonarr]
 
-# Paperless Kubernetes Deployment
-- name: Deploy Paperless on Kubernetes
-  hosts: ctrl-01
-  gather_facts: false
-  become: true
-  roles:
-    - role: k8s-paperless
-      tags: [k8s, paperless]
+# # Paperless Kubernetes Deployment
+# - name: Deploy Paperless on Kubernetes
+#   hosts: ctrl-01
+#   gather_facts: false
+#   become: true
+#   roles:
+#     - role: k8s-paperless
+#       tags: [k8s, paperless]
