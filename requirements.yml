@@ -46,3 +46,8 @@ roles:
   - name: kubernetes
     src: https://github.com/khaosx/ansible.role.kubernetes.git
     scm: git
+
+  - name: k8s_homepage
+    src: https://github.com/khaosx/ansible.role.k8s_homepage.git
+    version: "0.1.0"
+    scm: git
