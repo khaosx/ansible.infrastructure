@@ -40,6 +40,8 @@ all:
       ansible_host: 10.0.10.2
     dns-02:
       ansible_host: 10.0.10.3
+    plex:
+      ansible_host: 10.0.20.90
 
   children:
     linux_servers:
@@ -51,6 +53,7 @@ all:
         raspberry_pi_4:
         docker:
         kubernetes:
+        plex:
 
     kubernetes:
       children:

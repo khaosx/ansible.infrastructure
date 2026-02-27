@@ -108,11 +108,8 @@
       run_once: true
       tags: [k8s-arrstack, workloads, arrstack, sonarr]
 
-# # Paperless Kubernetes Deployment
-# - name: Deploy Paperless on Kubernetes
-#   hosts: ctrl-01
-#   gather_facts: false
-#   become: true
-#   roles:
-#     - role: k8s-paperless
-#       tags: [k8s, paperless]
+    - name: Deploy Paperless stack through k8s-paperless role
+      ansible.builtin.import_role:
+        name: k8s-paperless
+      run_once: true
+      tags: [k8s-paperless, workloads, paperless]
