@@ -32,14 +32,7 @@ vault_kubernetes_ceph_user_key: "op://khaosx-infrastructure/Kubernetes Secrets/c
 # Pi-hole web UI password hashes (Balloon-SHA256)
 vault_pihole_webserver_pwhash: "op://khaosx-infrastructure/Pi-hole Web Password Hashes/webserver_pwhash"
 vault_pihole_webserver_app_pwhash: "op://khaosx-infrastructure/Pi-hole Web Password Hashes/webserver_app_pwhash"
-
-# Paperless secrets
-vault_paperless_db_password: "op://khaosx-infrastructure/Paperless Secrets/paperless_db_password"
-vault_paperless_secret_key: "op://khaosx-infrastructure/Paperless Secrets/paperless_secret_key"
-
-# Paperless Kubernetes secrets
-vault_paperless_db_pass: "op://khaosx-infrastructure/Paperless K8s Secrets/db_pass"
-vault_paperless_gpt_api_key: "op://khaosx-infrastructure/Paperless K8s Secrets/gpt_api_key"
+vault_pihole_admin_password: "op://khaosx-infrastructure/Application Admin User/password"
 
 # Homepage service secrets
 vault_homepage_pihole_api_key: "op://khaosx-infrastructure/Pihole API Key/password"

@@ -64,39 +64,10 @@ ufw_application_catalog:
       - "3000/tcp"
       - "8080/tcp"
 
-# Nebula Sync defaults/overrides
-# Primary is the first host in the 'pihole' inventory group; remaining hosts are replicas.
-nebula_sync_pihole_hosts: "{{ groups['pihole'] | default([]) }}"
-nebula_sync_primary: >-
-  {{
-    ('http://' ~ nebula_sync_pihole_hosts[0] ~ '.' ~ site_domain ~ '|' ~ app_admin_user_pw)
-    if (nebula_sync_pihole_hosts | length) > 0 else ''
-  }}
-nebula_sync_replicas: >-
-  {{
-    nebula_sync_pihole_hosts[1:]
-    | map('regex_replace', '$', '.' ~ site_domain)
-    | map('regex_replace', '^', 'http://')
-    | map('regex_replace', '$', '|' ~ app_admin_user_pw)
-    | list
-  }}
-
-# Paperless stack defaults/overrides
-paperless_stack_enable_ai: true
-paperless_stack_url: "https://docubot.{{ site_domain }}"
-paperless_stack_paperless_username: "{{ app_admin_user }}"
-paperless_stack_ai_ollama_url: "http://jarvis-ai.{{ site_domain }}:11434"
-
-# Notification stack defaults/overrides
-notification_stack_apprise_port: 8000
-notification_stack_mailrise_smtp_port: 8025
-
-# Homepage defaults/overrides
-homepage_title: "Concierge"
-homepage_description: "Unified interface for infrastructure services"
-
-# Monitoring stack defaults/overrides
-monitoring_stack_grafana_port: 3000
-monitoring_stack_prometheus_port: 9090
-monitoring_stack_grafana_admin_user: "{{ app_admin_user }}"
-monitoring_stack_grafana_admin_password: "{{ app_admin_user_pw }}"
+# Pi-hole configuration
+pihole_v6_webserver_pwhash: "{{ vault_pihole_webserver_pwhash }}"
+pihole_v6_webserver_app_pwhash: "{{ vault_pihole_webserver_app_pwhash }}"
+pihole_v6_admin_password: "{{ vault_pihole_admin_password }}"
+pihole_v6_tls_email: "{{ vault_configure_ssl_email }}"
+pihole_v6_tls_cloudflare_api_token: "{{ vault_configure_ssl_cloudflare_api_token }}"
+pihole_v6_local_domain: "{{ vault_site_domain }}"
