@@ -24,6 +24,8 @@ all:
       kubernetes_role: worker
     jarvis-ai:
       ansible_host: 10.0.10.42
+    test-vm:
+      ansible_host: 10.0.20.89
     fire:
       ansible_host: 10.0.10.17
     air:
@@ -32,14 +34,6 @@ all:
       ansible_host: 10.0.10.19
     earth:
       ansible_host: 10.0.10.20
-    infrastructure-01:
-      ansible_host: 10.0.20.96
-    concierge:
-      ansible_host: 10.0.20.89
-    dns-01:
-      ansible_host: 10.0.10.2
-    dns-02:
-      ansible_host: 10.0.10.3
     plex:
       ansible_host: 10.0.20.90
 
@@ -78,18 +72,12 @@ all:
 
     core_servers:
       hosts:
-        infrastructure-01:
-        concierge:
+        test-vm:
 
     pihole:
       hosts:
         pihole-01:
         pihole-02:
-
-    technitium_dns:
-      hosts:
-        dns-01:
-        dns-02:
 
     dns_servers:
       hosts:
@@ -109,25 +97,8 @@ all:
 
     docker:
       hosts:
-        infrastructure-01:
-        concierge:
         fire:
         air:
         water:
         earth:
-
-    notification_stack:
-      hosts:
-        concierge:
-
-    homepage:
-      hosts:
-        concierge:
-
-    zulip:
-      hosts:
-        concierge:
-
-    monitoring_stack:
-      hosts:
-        monitor-01:
+        test-vm:
