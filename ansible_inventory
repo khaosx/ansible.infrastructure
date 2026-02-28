@@ -53,6 +53,10 @@ all:
         raspberry_pi_4:
         docker:
         kubernetes:
+        plex_servers:
+    
+    plex_servers:
+      hosts:
         plex:
 
     kubernetes:
