@@ -47,24 +47,21 @@
 
 # Kubernetes Workloads Deployment
 - name: Deploy Kubernetes Workloads
-  hosts: kubernetes
+  hosts: ctrl-01
   gather_facts: false
   become: true
   tasks:
     - name: Deploy Homepage through k8s_homepage role
       ansible.builtin.import_role:
         name: k8s_homepage
-      run_once: true
       tags: [k8s_homepage, homepage]
 
-    - name: Deploy arrstack workloads through k8s-arrstack role
+    - name: Deploy mediaops workloads through k8s_mediaops role
       ansible.builtin.import_role:
-        name: k8s-arrstack
-      run_once: true
-      tags: [k8s-arrstack, workloads, arrstack, sonarr]
+        name: k8s_mediaops
+      tags: [k8s_mediaops, workloads, mediaops]
 
     - name: Deploy Paperless stack through k8s-paperless role
       ansible.builtin.import_role:
         name: k8s-paperless
-      run_once: true
       tags: [k8s-paperless, workloads, paperless]
