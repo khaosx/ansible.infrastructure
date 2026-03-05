@@ -26,6 +26,9 @@ all:
       ansible_host: 10.0.10.42
     test-vm:
       ansible_host: 10.0.20.89
+    devops:
+      ansible_host: 10.0.20.51
+      wants_ansible: true
     fire:
       ansible_host: 10.0.10.17
     air:
@@ -73,6 +76,7 @@ all:
     core_servers:
       hosts:
         test-vm:
+        devops:
 
     pihole:
       hosts:
@@ -102,3 +106,4 @@ all:
         water:
         earth:
         test-vm:
+        devops:

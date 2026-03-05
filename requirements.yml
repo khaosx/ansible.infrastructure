@@ -50,3 +50,7 @@ roles:
   - name: k8s_homepage
     src: https://github.com/khaosx/ansible.role.k8s_homepage.git
     scm: git
+
+  - name: ai_llm_endpoint
+    src: https://github.com/khaosx/ansible.role.ai_llm_endpoint.git
+    scm: git
